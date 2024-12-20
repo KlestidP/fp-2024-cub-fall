@@ -11,7 +11,7 @@ import Text.Parsec.Token
 import Text.Parsec.Language (emptyDef)
 import Control.Monad.Identity (Identity)
 
--- expression types
+-- Expression types
 data Expr 
     = Num Double 
     | Var String 
@@ -31,13 +31,13 @@ data Expr
     | E
     deriving (Show)
 
--- lexer definition
+-- Lexer definition
 lexer :: TokenParser ()
 lexer = makeTokenParser emptyDef {
     reservedNames = ["sin", "cos", "tan", "log", "ln", "pi", "e", "sqrt"]
 }
 
--- parsing functions
+-- Parsing functions
 parseExpr :: Parser Expr
 parseExpr = spaces *> buildExpressionParser operators parseFactor <* spaces <?> "expression"
 
@@ -51,7 +51,7 @@ operators = [
      Infix (reservedOp lexer "-" >> return Sub) AssocLeft]
   ]
 
--- parsing trig and log functions
+-- Parsing trig and log functions
 parseFunc :: Parser Expr
 parseFunc = do
     func <- choice $ map (try . string) ["sin", "cos", "tan", "log", "ln", "sqrt"]
@@ -71,10 +71,14 @@ parseConstant = (string "pi" >> return Pi) <|> (string "e" >> return E)
 
 parseNumber :: Parser Expr
 parseNumber = do
-    num <- many1 (oneOf "0123456789.")
-    if length (filter (=='.') num) > 1 
-        then fail "Invalid number format"
-        else return $ Num (read num)
+    whole <- many1 digit
+    fractional <- optionMaybe $ do
+        char '.'
+        many1 digit
+    let numStr = case fractional of
+                    Just frac -> whole ++ "." ++ frac
+                    Nothing   -> whole
+    return $ Num (read numStr)
 
 parseFactor :: Parser Expr
 parseFactor = spaces *> (parseConstant
