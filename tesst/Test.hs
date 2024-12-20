@@ -6,17 +6,19 @@ import Text.Parsec (parse)
 import Test.HUnit
 import Test.QuickCheck
 import Parser
-import Evaluator
+import Evaluator (evaluate, EvalResult, ErrorType(..))
 import Memory
 
 -- function to compare floating-point values within a margin of error
-assertApproxEqual :: String -> Double -> Double -> Assertion
-assertApproxEqual desc expected actual =
+assertApproxEqual :: String -> Double -> EvalResult -> Assertion
+assertApproxEqual desc expected (Right actual) =
     let epsilon = 1e-10  -- Allowable error margin
     in assertBool (desc ++ " (expected " ++ show expected ++ ", got " ++ show actual ++ ")") 
        (abs (expected - actual) < epsilon)
+assertApproxEqual desc _ (Left err) =
+    assertFailure $ desc ++ " (evaluation failed with error: " ++ show err ++ ")"
 
--- unit Tests for parsing
+-- unit tests for parsing
 parseNumTest :: Test
 parseNumTest = TestCase $ do
     let result = parse parseExpr "" "42"
@@ -31,7 +33,7 @@ parseBinaryOpTest = TestCase $ do
         Right (Add (Num 3) (Num 4)) -> return ()
         _ -> assertFailure $ "Failed to parse binary operation: " ++ show result
 
--- unit Tests for Function Evaluation
+-- unit tests for function evaluation
 evalSinTests :: Test
 evalSinTests = TestList [
     TestCase $ assertApproxEqual "Sin(0)" 0.0 (fst $ evaluate (Sin (Num 0)) initialState),
@@ -74,7 +76,7 @@ evalETests = TestList [
     TestCase $ assertApproxEqual "E^0" 1.0 (fst $ evaluate (Pow E (Num 0)) initialState)
     ]
 
--- quickCheck property test
+-- ^quickCheck property tests
 prop_addCommutative :: Double -> Double -> Bool
 prop_addCommutative x y =
     fst (evaluate (Add (Num x) (Num y)) initialState) ==
