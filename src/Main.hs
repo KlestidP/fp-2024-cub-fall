@@ -53,11 +53,12 @@ repl state = do
             repl state
         Right (ExprCommand expr) -> do
             let (result, newState) = evaluate expr state
-            if isNaN result
-                then putStrLn "Error: Invalid operation"
-            else if isInfinite result
-                then putStrLn "Error: Division by zero resulted in Infinity."
-            else putStrLn $ "Result: " ++ printf "%.10g" result
+            case result of
+                Left DivisionByZero -> putStrLn "Error: Division by zero."
+                Left NegativeSqrt   -> putStrLn "Error: Negative value for square root."
+                Left (VariableNotFound var) ->
+                    putStrLn $ "Error: Variable '" ++ var ++ "' not found."
+                Right value -> putStrLn $ "Result: " ++ printf "%.10g" value
             repl newState
         Right MemoryPrint -> do
             if null (Map.toList $ memory state)
@@ -70,6 +71,7 @@ repl state = do
             let newState = storeMemory key value state
             putStrLn $ "Stored: " ++ key ++ " = " ++ printf "%.10g" value
             repl newState
+
 
 main :: IO ()
 main = do
